@@ -86,8 +86,8 @@ Section "VEIL VPN Client (required)" SecMain
 
   ; Main application files
   File "bin\veil-client-gui.exe"
-  File "bin\veil-client.exe"
-  File "bin\veil-service.exe"
+  ; Note: veil-client.exe and veil-service.exe are not built on Windows
+  ; They require the transport layer which is currently Linux-only
 
   ; Qt DLLs (if not using static build)
   File /nonfatal "bin\Qt6Core.dll"
@@ -156,25 +156,26 @@ Section "Wintun Driver" SecWintun
 
 SectionEnd
 
-Section "Windows Service" SecService
-  ; Install the Windows service
-  DetailPrint "Installing VEIL VPN Service..."
-  nsExec::ExecToLog '"$INSTDIR\veil-service.exe" --install'
-  Pop $0
-
-  ${If} $0 != 0
-    DetailPrint "Warning: Failed to install service (error code: $0)"
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Failed to install Windows service. You may need to install it manually using Administrator privileges."
-  ${Else}
-    DetailPrint "Service installed successfully"
-
-    ; Start the service
-    DetailPrint "Starting VEIL VPN Service..."
-    nsExec::ExecToLog '"$INSTDIR\veil-service.exe" --start'
-    Pop $0
-  ${EndIf}
-
-SectionEnd
+; Windows Service section disabled - veil-service.exe is not built on Windows yet
+; Section "Windows Service" SecService
+;   ; Install the Windows service
+;   DetailPrint "Installing VEIL VPN Service..."
+;   nsExec::ExecToLog '"$INSTDIR\veil-service.exe" --install'
+;   Pop $0
+;
+;   ${If} $0 != 0
+;     DetailPrint "Warning: Failed to install service (error code: $0)"
+;     MessageBox MB_OK|MB_ICONEXCLAMATION "Failed to install Windows service. You may need to install it manually using Administrator privileges."
+;   ${Else}
+;     DetailPrint "Service installed successfully"
+;
+;     ; Start the service
+;     DetailPrint "Starting VEIL VPN Service..."
+;     nsExec::ExecToLog '"$INSTDIR\veil-service.exe" --start'
+;     Pop $0
+;   ${EndIf}
+;
+; SectionEnd
 
 Section "Start Menu Shortcuts" SecStartMenu
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
@@ -197,7 +198,8 @@ SectionEnd
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SecMain} "Core application files (required)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecWintun} "Wintun network driver for VPN connectivity"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecService} "Install and start the VPN background service"
+  ; SecService disabled - service not built on Windows yet
+  ; !insertmacro MUI_DESCRIPTION_TEXT ${SecService} "Install and start the VPN background service"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenu} "Create Start Menu shortcuts"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Create Desktop shortcut"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecAutoStart} "Automatically start VEIL VPN when Windows starts"
@@ -208,17 +210,19 @@ SectionEnd
 ; ============================================================================
 
 Section "Uninstall"
+  ; Note: Service removal disabled - veil-service.exe is not built on Windows yet
   ; Stop and remove the service
-  DetailPrint "Stopping VEIL VPN Service..."
-  nsExec::ExecToLog '"$INSTDIR\veil-service.exe" --stop'
-
-  DetailPrint "Uninstalling VEIL VPN Service..."
-  nsExec::ExecToLog '"$INSTDIR\veil-service.exe" --uninstall'
+  ; DetailPrint "Stopping VEIL VPN Service..."
+  ; nsExec::ExecToLog '"$INSTDIR\veil-service.exe" --stop'
+  ;
+  ; DetailPrint "Uninstalling VEIL VPN Service..."
+  ; nsExec::ExecToLog '"$INSTDIR\veil-service.exe" --uninstall'
 
   ; Remove files
   Delete "$INSTDIR\veil-client-gui.exe"
-  Delete "$INSTDIR\veil-client.exe"
-  Delete "$INSTDIR\veil-service.exe"
+  ; Note: veil-client.exe and veil-service.exe are not built on Windows
+  ; Delete "$INSTDIR\veil-client.exe"
+  ; Delete "$INSTDIR\veil-service.exe"
   Delete "$INSTDIR\Qt6Core.dll"
   Delete "$INSTDIR\Qt6Gui.dll"
   Delete "$INSTDIR\Qt6Widgets.dll"
