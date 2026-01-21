@@ -1,3 +1,19 @@
+# Platform-specific source files
+if(WIN32)
+  set(VEIL_TUN_SOURCES tun/tun_device_windows.cpp)
+  set(VEIL_ROUTING_SOURCES tun/routing_windows.cpp)
+  set(VEIL_IPC_SOURCES common/ipc/ipc_socket_windows.cpp)
+  set(VEIL_WINDOWS_SOURCES
+    windows/service_manager.cpp
+    windows/system_tray.cpp
+  )
+else()
+  set(VEIL_TUN_SOURCES tun/tun_device_linux.cpp)
+  set(VEIL_ROUTING_SOURCES tun/routing_linux.cpp)
+  set(VEIL_IPC_SOURCES common/ipc/ipc_socket_unix.cpp)
+  set(VEIL_WINDOWS_SOURCES)
+endif()
+
 add_library(veil_common STATIC
   common/crypto/random.cpp
   common/crypto/crypto_engine.cpp
@@ -21,7 +37,7 @@ add_library(veil_common STATIC
   common/signal/signal_handler.cpp
   common/daemon/daemon.cpp
   common/ipc/ipc_protocol.cpp
-  common/ipc/ipc_socket.cpp
+  ${VEIL_IPC_SOURCES}
   transport/udp_socket/udp_socket.cpp
   transport/mux/ack_bitmap.cpp
   transport/mux/reorder_buffer.cpp
@@ -32,12 +48,13 @@ add_library(veil_common STATIC
   transport/session/transport_session.cpp
   transport/event_loop/event_loop.cpp
   transport/stats/transport_stats.cpp
-  tun/tun_device.cpp
-  tun/routing.cpp
+  ${VEIL_TUN_SOURCES}
+  ${VEIL_ROUTING_SOURCES}
   tun/mtu_discovery.cpp
   tunnel/tunnel.cpp
   tunnel/session_migration.cpp
   server/session_table.cpp
+  ${VEIL_WINDOWS_SOURCES}
 )
 
 target_include_directories(veil_common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -49,6 +66,17 @@ target_link_libraries(veil_common
     CLI11::CLI11
     nlohmann_json::nlohmann_json
 )
+
+# Windows-specific libraries
+if(WIN32)
+  target_link_libraries(veil_common
+    PUBLIC
+      iphlpapi
+      ws2_32
+      rpcrt4
+  )
+  target_compile_definitions(veil_common PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX)
+endif()
 
 veil_set_warnings(veil_common)
 
@@ -94,4 +122,17 @@ if(VEIL_BUILD_GUI)
   if(VEIL_BUILD_SERVER)
     add_subdirectory(gui-server)
   endif()
+endif()
+
+# Windows Service executable (Windows only)
+if(WIN32)
+  add_executable(veil-service
+    windows/service_main.cpp
+  )
+  target_link_libraries(veil-service PRIVATE veil_common)
+  veil_set_warnings(veil-service)
+
+  install(TARGETS veil-service
+    RUNTIME DESTINATION bin
+  )
 endif()

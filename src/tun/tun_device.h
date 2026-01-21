@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
@@ -10,6 +11,9 @@
 #include <vector>
 
 namespace veil::tun {
+
+// Forward declaration for Windows implementation details
+struct TunDeviceImpl;
 
 // Configuration for TUN device.
 struct TunConfig {
@@ -37,8 +41,10 @@ struct TunStats {
   std::uint64_t write_errors{0};
 };
 
-// RAII wrapper for Linux TUN device.
+// RAII wrapper for TUN device (cross-platform).
 // Provides interface for reading/writing IP packets.
+// On Linux: Uses /dev/net/tun
+// On Windows: Uses Wintun (WireGuard's TUN driver)
 class TunDevice {
  public:
   using ReadHandler = std::function<void(std::span<const std::uint8_t>)>;
@@ -93,10 +99,10 @@ class TunDevice {
   bool set_up(bool up, std::error_code& ec);
 
  private:
-  // Configure IP address and netmask using ioctl.
+  // Configure IP address and netmask.
   bool configure_address(const TunConfig& config, std::error_code& ec);
 
-  // Set MTU using ioctl.
+  // Set MTU.
   bool configure_mtu(int mtu, std::error_code& ec);
 
   // Bring interface up.
@@ -106,6 +112,11 @@ class TunDevice {
   std::string device_name_;
   TunStats stats_;
   bool packet_info_{false};
+
+#ifdef _WIN32
+  // Windows-specific implementation details (Wintun)
+  std::unique_ptr<TunDeviceImpl> impl_;
+#endif
 };
 
 }  // namespace veil::tun
