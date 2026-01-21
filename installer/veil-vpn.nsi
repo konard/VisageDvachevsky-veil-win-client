@@ -267,26 +267,12 @@ SectionEnd
 ; ============================================================================
 
 Function .onInit
-  ; Check for Windows Vista or later
-  ${If} ${AtLeastWinVista}
-  ${Else}
-    MessageBox MB_OK|MB_ICONSTOP "This application requires Windows Vista or later."
-    Abort
-  ${EndIf}
-
-  ; Check for 64-bit Windows
-  ${IfNot} ${RunningX64}
-    MessageBox MB_OK|MB_ICONSTOP "This application requires a 64-bit version of Windows."
-    Abort
-  ${EndIf}
-
   ; Check for admin rights
   UserInfo::GetAccountType
   Pop $0
-  ${If} $0 != "Admin"
+  StrCmp $0 "Admin" +3
     MessageBox MB_OK|MB_ICONSTOP "Administrator privileges are required to install ${PRODUCT_NAME}."
     Abort
-  ${EndIf}
 
 FunctionEnd
 
