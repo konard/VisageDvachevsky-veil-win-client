@@ -8,6 +8,7 @@
 #include <atomic>
 #include <csignal>
 #include <filesystem>
+#include <iostream>
 #include <thread>
 
 #include "../client/client_config.h"
@@ -15,7 +16,6 @@
 #include "../common/ipc/ipc_protocol.h"
 #include "../common/ipc/ipc_socket.h"
 #include "../common/logging/logger.h"
-#include "../common/signal/signal_handler.h"
 #include "../tunnel/tunnel.h"
 #include "service_manager.h"
 
@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
                 << std::endl;
 
       // Initialize logging to console
-      logging::init("veil-service", spdlog::level::debug);
+      logging::configure_logging(logging::LogLevel::kDebug, true);
 
       // Set up signal handler for Ctrl+C
       signal(SIGINT, [](int) {
@@ -192,7 +192,7 @@ void WINAPI service_main(DWORD /*argc*/, LPSTR* /*argv*/) {
   ServiceControlHandler::report_starting(1);
 
   // Initialize logging to Windows Event Log
-  logging::init("veil-service", spdlog::level::info);
+  logging::configure_logging(logging::LogLevel::kInfo, false);
 
   // Set stop handler
   ServiceControlHandler::on_stop([]() { stop_service(); });
@@ -236,7 +236,7 @@ void run_service() {
   client::ClientConfig config;
   if (!config_path.empty()) {
     std::error_code ec;
-    if (!config.load(config_path.string(), ec)) {
+    if (!client::load_config_file(config_path.string(), config, ec)) {
       LOG_WARN("Failed to load config from {}: {}", config_path.string(),
                ec.message());
     } else {

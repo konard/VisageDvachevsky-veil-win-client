@@ -7,9 +7,11 @@
 
 #include "client/client_config.h"
 #include "common/cli/cli_utils.h"
+#ifndef _WIN32
 #include "common/daemon/daemon.h"
-#include "common/logging/logger.h"
 #include "common/signal/signal_handler.h"
+#endif
+#include "common/logging/logger.h"
 #include "tunnel/tunnel.h"
 #include "tun/routing.h"
 
@@ -152,13 +154,14 @@ int main(int argc, char* argv[]) {
                               true);
   LOG_INFO("VEIL Client starting...");
 
-  // Check if already running
+#ifndef _WIN32
+  // Check if already running (POSIX only)
   if (!config.pid_file.empty() && daemon::is_already_running(config.pid_file, ec)) {
     cli::print_error("Another instance is already running (PID file: " + config.pid_file + ")");
     return EXIT_FAILURE;
   }
 
-  // Daemonize if requested
+  // Daemonize if requested (POSIX only)
   if (config.daemon_mode) {
     daemon::DaemonConfig daemon_config;
     daemon_config.pid_file = config.pid_file;
@@ -174,7 +177,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // Create PID file if not daemonizing (daemonize() creates it)
+  // Create PID file if not daemonizing (daemonize() creates it) (POSIX only)
   std::unique_ptr<daemon::PidFile> pid_file;
   if (!config.daemon_mode && !config.pid_file.empty()) {
     pid_file = std::make_unique<daemon::PidFile>(config.pid_file);
@@ -183,6 +186,7 @@ int main(int argc, char* argv[]) {
       LOG_WARN("Failed to create PID file: {}", ec.message());
     }
   }
+#endif
 
   // Create tunnel
   tunnel::Tunnel tun(config.tunnel);
@@ -258,7 +262,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // Setup signal handlers
+#ifndef _WIN32
+  // Setup signal handlers (POSIX only)
   auto& sig_handler = signal::SignalHandler::instance();
   sig_handler.on(signal::Signal::kInterrupt, [&tun](signal::Signal) {
     log_signal_sigint();
@@ -268,6 +273,7 @@ int main(int argc, char* argv[]) {
     log_signal_sigterm();
     tun.stop();
   });
+#endif
 
   // Run the tunnel
   std::cout << '\n';
