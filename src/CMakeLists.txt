@@ -7,12 +7,13 @@ if(WIN32)
     windows/service_manager.cpp
     windows/system_tray.cpp
   )
-  # Windows doesn't use POSIX signals, daemonization, epoll-based transport, or tunnel
+  # Windows doesn't use POSIX signals, daemonization, epoll-based transport, tunnel, or CLI config
   set(VEIL_SIGNAL_SOURCES)
   set(VEIL_DAEMON_SOURCES)
   set(VEIL_TRANSPORT_SOURCES)
   set(VEIL_TUNNEL_SOURCES)
   set(VEIL_SERVER_SOURCES)
+  set(VEIL_CLI_CONFIG_SOURCES)
 else()
   set(VEIL_TUN_SOURCES tun/tun_device_linux.cpp)
   set(VEIL_ROUTING_SOURCES tun/routing_linux.cpp)
@@ -40,6 +41,9 @@ else()
   set(VEIL_SERVER_SOURCES
     server/session_table.cpp
   )
+  set(VEIL_CLI_CONFIG_SOURCES
+    common/config/app_config.cpp
+  )
 endif()
 
 add_library(veil_common STATIC
@@ -47,7 +51,7 @@ add_library(veil_common STATIC
   common/crypto/crypto_engine.cpp
   common/logging/logger.cpp
   common/logging/constrained_logger.cpp
-  common/config/app_config.cpp
+  ${VEIL_CLI_CONFIG_SOURCES}
   common/packet/packet_builder.cpp
   common/session/replay_window.cpp
   common/session/session_rotator.cpp
