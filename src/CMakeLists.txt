@@ -7,15 +7,17 @@ if(WIN32)
     windows/service_manager.cpp
     windows/system_tray.cpp
   )
-  # Windows doesn't use POSIX signals
+  # Windows doesn't use POSIX signals or daemonization
   set(VEIL_SIGNAL_SOURCES)
+  set(VEIL_DAEMON_SOURCES)
 else()
   set(VEIL_TUN_SOURCES tun/tun_device_linux.cpp)
   set(VEIL_ROUTING_SOURCES tun/routing_linux.cpp)
   set(VEIL_IPC_SOURCES common/ipc/ipc_socket_unix.cpp)
   set(VEIL_WINDOWS_SOURCES)
-  # POSIX signals are available on Unix-like systems
+  # POSIX signals and daemonization are available on Unix-like systems
   set(VEIL_SIGNAL_SOURCES common/signal/signal_handler.cpp)
+  set(VEIL_DAEMON_SOURCES common/daemon/daemon.cpp)
 endif()
 
 add_library(veil_common STATIC
@@ -39,7 +41,7 @@ add_library(veil_common STATIC
   common/obfuscation/obfuscation_profile.cpp
   common/protocol_wrapper/websocket_wrapper.cpp
   ${VEIL_SIGNAL_SOURCES}
-  common/daemon/daemon.cpp
+  ${VEIL_DAEMON_SOURCES}
   common/ipc/ipc_protocol.cpp
   ${VEIL_IPC_SOURCES}
   transport/udp_socket/udp_socket.cpp
