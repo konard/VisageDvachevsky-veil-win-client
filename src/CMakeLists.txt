@@ -134,8 +134,10 @@ if(VEIL_BUILD_GUI)
   endif()
 endif()
 
-# Windows Service executable (Windows only)
-if(WIN32)
+# Windows Service executable (Windows only, optional)
+option(VEIL_BUILD_SERVICE "Build Windows service executable" OFF)
+
+if(WIN32 AND VEIL_BUILD_SERVICE)
   add_executable(veil-service
     windows/service_main.cpp
   )
