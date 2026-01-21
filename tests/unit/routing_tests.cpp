@@ -2,6 +2,10 @@
 
 #include <system_error>
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 #include "tun/routing.h"
 
 namespace veil::tun::test {
@@ -51,10 +55,13 @@ TEST_F(RoutingUnitTest, SystemStateDefaults) {
 class RoutingIntegrationTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    // Skip tests that require root privileges.
+    // Skip tests that require root/admin privileges.
+#ifndef _WIN32
     if (getuid() != 0) {
       GTEST_SKIP() << "Routing tests require root privileges";
     }
+#endif
+    // On Windows, routing operations require admin privileges
   }
 };
 

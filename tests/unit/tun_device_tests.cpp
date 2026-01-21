@@ -2,6 +2,10 @@
 
 #include <system_error>
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 #include "tun/tun_device.h"
 
 namespace veil::tun::test {
@@ -9,10 +13,13 @@ namespace veil::tun::test {
 class TunDeviceTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    // Skip tests that require root privileges.
+    // Skip tests that require root/admin privileges.
+#ifndef _WIN32
     if (getuid() != 0) {
       GTEST_SKIP() << "TUN device tests require root privileges";
     }
+#endif
+    // On Windows, privilege checks are done at runtime via Wintun API
   }
 };
 
@@ -148,12 +155,19 @@ TEST_F(TunDeviceUnitTest, OpenWithoutRoot) {
   TunDevice device;
   std::error_code ec;
 
-  // This should fail without root.
+  // This should fail without root/admin privileges.
   bool opened = device.open(config, ec);
+#ifndef _WIN32
   if (getuid() != 0) {
     EXPECT_FALSE(opened);
     EXPECT_TRUE(ec);  // Error code should be set.
   }
+#else
+  // On Windows, Wintun requires admin privileges - test may fail if not admin
+  if (!opened) {
+    EXPECT_TRUE(ec);  // Error code should be set if opening failed.
+  }
+#endif
 }
 
 }  // namespace veil::tun::test
