@@ -8,6 +8,7 @@ on:
       - 'src/**'
       - 'CMakeLists.txt'
       - 'cmake/**'
+      - '.clang-tidy'
       - '.github/workflows/windows-build.yml'
 
 jobs:
