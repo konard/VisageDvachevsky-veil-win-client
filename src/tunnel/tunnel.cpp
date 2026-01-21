@@ -5,7 +5,9 @@
 
 #include "common/handshake/handshake_processor.h"
 #include "common/logging/logger.h"
+#ifndef _WIN32
 #include "common/signal/signal_handler.h"
+#endif
 #include "common/utils/rate_limiter.h"
 
 namespace veil::tunnel {
@@ -103,9 +105,11 @@ void Tunnel::run() {
   running_.store(true);
   LOG_INFO("Tunnel starting...");
 
-  // Setup signal handlers.
+#ifndef _WIN32
+  // Setup signal handlers (POSIX only).
   auto& sig_handler = signal::SignalHandler::instance();
   sig_handler.setup_defaults();
+#endif
 
   // Connect to server (for client mode).
   if (!config_.server_address.empty()) {
@@ -140,7 +144,11 @@ void Tunnel::run() {
   // Main event loop.
   std::array<std::uint8_t, kMaxPacketSize> tun_buffer{};
 
-  while (running_.load() && !sig_handler.should_terminate()) {
+  while (running_.load()
+#ifndef _WIN32
+         && !sig_handler.should_terminate()
+#endif
+  ) {
     std::error_code ec;
 
     // Check TUN device for incoming packets.

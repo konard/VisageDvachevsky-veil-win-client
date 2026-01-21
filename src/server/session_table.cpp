@@ -1,7 +1,12 @@
 #include "server/session_table.h"
 
 #include <algorithm>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
+#endif
 #include <sstream>
 
 #include "common/logging/logger.h"
