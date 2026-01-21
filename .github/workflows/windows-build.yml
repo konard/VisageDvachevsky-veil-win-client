@@ -151,7 +151,27 @@ jobs:
           path: installer/
 
       - name: Install NSIS
-        run: choco install nsis -y
+        run: |
+          # Retry choco install up to 3 times with exponential backoff
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
+
+          while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+              choco install nsis -y --no-progress
+              $success = $true
+            } catch {
+              $retryCount++
+              if ($retryCount -lt $maxRetries) {
+                $waitTime = [math]::Pow(2, $retryCount) * 5
+                Write-Host "NSIS installation failed. Retrying in $waitTime seconds..."
+                Start-Sleep -Seconds $waitTime
+              } else {
+                throw "Failed to install NSIS after $maxRetries attempts"
+              }
+            }
+          }
 
       - name: Build installer
         run: |
