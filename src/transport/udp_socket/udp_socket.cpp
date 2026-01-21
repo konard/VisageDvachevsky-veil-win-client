@@ -1,5 +1,9 @@
 #include "transport/udp_socket/udp_socket.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <cerrno>
 #include <netdb.h>
@@ -7,6 +11,7 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#endif
 
 #include <array>
 #include <chrono>
@@ -26,7 +31,13 @@
 #endif
 
 namespace {
-std::error_code last_error() { return std::error_code(errno, std::generic_category()); }
+std::error_code last_error() {
+#ifdef _WIN32
+  return std::error_code(WSAGetLastError(), std::system_category());
+#else
+  return std::error_code(errno, std::generic_category());
+#endif
+}
 
 bool resolve(const veil::transport::UdpEndpoint& endpoint, sockaddr_in& addr) {
   std::memset(&addr, 0, sizeof(addr));
