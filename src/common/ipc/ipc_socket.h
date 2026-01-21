@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef _WIN32
 #include <sys/un.h>
+#endif
 
 #include <functional>
 #include <memory>
@@ -10,15 +12,28 @@
 
 #include "ipc_protocol.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace veil::ipc {
 
 // ============================================================================
 // Unix Domain Socket IPC Implementation
 // ============================================================================
 
-// Default socket paths
+// Default socket/pipe paths
+#ifdef _WIN32
+constexpr const char* kDefaultClientSocketPath = "\\\\.\\pipe\\veil-client";
+constexpr const char* kDefaultServerSocketPath = "\\\\.\\pipe\\veil-server";
+#else
 constexpr const char* kDefaultClientSocketPath = "/tmp/veil-client.sock";
 constexpr const char* kDefaultServerSocketPath = "/tmp/veil-server.sock";
+#endif
+
+// Forward declarations for platform-specific implementations
+struct IpcServerImpl;
+struct IpcClientImpl;
 
 // ============================================================================
 // IPC Server (runs in daemon)
@@ -66,7 +81,13 @@ class IpcServer {
   void accept_connection(std::error_code& ec);
   void handle_client_data(ClientConnection& conn, std::error_code& ec);
   void remove_client(int client_fd);
+
+#ifdef _WIN32
+  bool send_raw(void* handle, const std::string& data, std::error_code& ec);
+  std::unique_ptr<IpcServerImpl> impl_;
+#else
   bool send_raw(int fd, const std::string& data, std::error_code& ec);
+#endif
 
   std::string socket_path_;
   int server_fd_{-1};
@@ -127,6 +148,10 @@ class IpcClient {
   MessageHandler message_handler_;
   ConnectionHandler connection_handler_;
   std::string receive_buffer_;
+
+#ifdef _WIN32
+  std::unique_ptr<IpcClientImpl> impl_;
+#endif
 };
 
 }  // namespace veil::ipc
