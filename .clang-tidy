@@ -15,6 +15,9 @@
 # - readability-magic-numbers: Protocol constants are clear in context
 # - bugprone-easily-swappable-parameters: Too noisy for crypto APIs
 # - bugprone-unchecked-optional-access: Tests use ASSERT_TRUE before .value()
+# - modernize-use-ranges: Too aggressive for existing C++20 code
+# - modernize-use-designated-initializers: Style preference
+# - clang-diagnostic-error: False positives on Windows with MSVC/clang-cl exception handling
 
 Checks: >
   -*,
@@ -29,13 +32,14 @@ Checks: >
   -modernize-use-nodiscard,
   -modernize-avoid-c-arrays,
   -modernize-deprecated-headers,
+  -modernize-use-ranges,
+  -modernize-use-designated-initializers,
   performance-*,
   -performance-enum-size,
   -performance-move-const-arg,
   readability-implicit-bool-conversion,
   -readability-magic-numbers,
-  -modernize-use-ranges,
-  -modernize-use-designated-initializers
+  -clang-diagnostic-error
 
 WarningsAsErrors: '-*,bugprone-*,modernize-*,performance-*,readability-*,-clang-diagnostic-*'
 
