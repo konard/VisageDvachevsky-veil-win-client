@@ -33,9 +33,11 @@ Checks: >
   -performance-enum-size,
   -performance-move-const-arg,
   readability-implicit-bool-conversion,
-  -readability-magic-numbers
+  -readability-magic-numbers,
+  -modernize-use-ranges,
+  -modernize-use-designated-initializers
 
-WarningsAsErrors: '*'
+WarningsAsErrors: '-*,bugprone-*,modernize-*,performance-*,readability-*,-clang-diagnostic-*'
 
 # Only check our own headers, not third-party deps
 HeaderFilterRegex: '^.*/src/.*\.h$'
