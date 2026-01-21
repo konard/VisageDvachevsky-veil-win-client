@@ -7,17 +7,30 @@ if(WIN32)
     windows/service_manager.cpp
     windows/system_tray.cpp
   )
-  # Windows doesn't use POSIX signals or daemonization
+  # Windows doesn't use POSIX signals, daemonization, or epoll-based transport
   set(VEIL_SIGNAL_SOURCES)
   set(VEIL_DAEMON_SOURCES)
+  set(VEIL_TRANSPORT_SOURCES)
 else()
   set(VEIL_TUN_SOURCES tun/tun_device_linux.cpp)
   set(VEIL_ROUTING_SOURCES tun/routing_linux.cpp)
   set(VEIL_IPC_SOURCES common/ipc/ipc_socket_unix.cpp)
   set(VEIL_WINDOWS_SOURCES)
-  # POSIX signals and daemonization are available on Unix-like systems
+  # POSIX signals, daemonization, and epoll-based transport are available on Unix-like systems
   set(VEIL_SIGNAL_SOURCES common/signal/signal_handler.cpp)
   set(VEIL_DAEMON_SOURCES common/daemon/daemon.cpp)
+  set(VEIL_TRANSPORT_SOURCES
+    transport/udp_socket/udp_socket.cpp
+    transport/mux/ack_bitmap.cpp
+    transport/mux/reorder_buffer.cpp
+    transport/mux/fragment_reassembly.cpp
+    transport/mux/mux_codec.cpp
+    transport/mux/retransmit_buffer.cpp
+    transport/mux/ack_scheduler.cpp
+    transport/session/transport_session.cpp
+    transport/event_loop/event_loop.cpp
+    transport/stats/transport_stats.cpp
+  )
 endif()
 
 add_library(veil_common STATIC
@@ -44,16 +57,7 @@ add_library(veil_common STATIC
   ${VEIL_DAEMON_SOURCES}
   common/ipc/ipc_protocol.cpp
   ${VEIL_IPC_SOURCES}
-  transport/udp_socket/udp_socket.cpp
-  transport/mux/ack_bitmap.cpp
-  transport/mux/reorder_buffer.cpp
-  transport/mux/fragment_reassembly.cpp
-  transport/mux/mux_codec.cpp
-  transport/mux/retransmit_buffer.cpp
-  transport/mux/ack_scheduler.cpp
-  transport/session/transport_session.cpp
-  transport/event_loop/event_loop.cpp
-  transport/stats/transport_stats.cpp
+  ${VEIL_TRANSPORT_SOURCES}
   ${VEIL_TUN_SOURCES}
   ${VEIL_ROUTING_SOURCES}
   tun/mtu_discovery.cpp
