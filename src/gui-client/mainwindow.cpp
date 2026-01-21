@@ -57,40 +57,41 @@ void MainWindow::setupUi() {
 }
 
 void MainWindow::setupMenuBar() {
-  // Set menu bar style
+  // Set menu bar style with new color scheme
   menuBar()->setStyleSheet(R"(
     QMenuBar {
-      background-color: #1a1d23;
-      color: #eceff4;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 4px 8px;
+      background-color: #0d1117;
+      color: #f0f6fc;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 6px 12px;
     }
     QMenuBar::item {
-      padding: 6px 12px;
-      border-radius: 4px;
+      padding: 8px 16px;
+      border-radius: 6px;
       margin: 2px;
     }
     QMenuBar::item:selected {
-      background-color: #252932;
+      background-color: rgba(255, 255, 255, 0.08);
     }
     QMenu {
-      background-color: #252932;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 4px;
+      background-color: #161b22;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 8px;
     }
     QMenu::item {
-      padding: 8px 24px;
-      border-radius: 4px;
+      padding: 10px 24px;
+      border-radius: 8px;
+      margin: 2px 0;
     }
     QMenu::item:selected {
-      background-color: #3aafff;
+      background-color: #238636;
       color: white;
     }
     QMenu::separator {
       height: 1px;
-      background-color: rgba(255, 255, 255, 0.1);
-      margin: 4px 8px;
+      background-color: rgba(255, 255, 255, 0.06);
+      margin: 8px 12px;
     }
   )");
 
@@ -109,10 +110,10 @@ void MainWindow::setupMenuBar() {
 void MainWindow::setupStatusBar() {
   statusBar()->setStyleSheet(R"(
     QStatusBar {
-      background-color: #1a1d23;
-      color: #8fa1b3;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 4px 8px;
+      background-color: #0d1117;
+      color: #8b949e;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 6px 12px;
       font-size: 12px;
     }
     QStatusBar::item {
@@ -130,10 +131,10 @@ void MainWindow::applyDarkTheme() {
   // Additional window-specific styles
   QString windowStyle = R"(
     QMainWindow {
-      background-color: #1a1d23;
+      background-color: #0d1117;
     }
     QStackedWidget {
-      background-color: #1a1d23;
+      background-color: #0d1117;
     }
   )";
 
@@ -157,54 +158,76 @@ void MainWindow::showDiagnosticsView() {
 }
 
 void MainWindow::showAboutDialog() {
-  // Create a simple about dialog
+  // Create a modern about dialog
   auto* dialog = new QDialog(this);
   dialog->setWindowTitle(tr("About VEIL"));
   dialog->setModal(true);
-  dialog->setFixedSize(400, 300);
+  dialog->setFixedSize(420, 380);
 
   dialog->setStyleSheet(R"(
     QDialog {
-      background-color: #1a1d23;
-      color: #eceff4;
+      background-color: #0d1117;
+      color: #f0f6fc;
     }
     QLabel {
-      color: #eceff4;
+      color: #f0f6fc;
     }
     QPushButton {
-      background: #3aafff;
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #238636, stop:1 #2ea043);
       border: none;
-      border-radius: 8px;
-      padding: 10px 24px;
+      border-radius: 10px;
+      padding: 12px 32px;
       color: white;
       font-weight: 600;
+      font-size: 14px;
     }
     QPushButton:hover {
-      background: #4abfff;
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #2ea043, stop:1 #3fb950);
     }
   )");
 
   auto* layout = new QVBoxLayout(dialog);
-  layout->setSpacing(16);
-  layout->setContentsMargins(32, 32, 32, 32);
+  layout->setSpacing(20);
+  layout->setContentsMargins(40, 40, 40, 40);
 
-  auto* titleLabel = new QLabel("VEIL VPN Client", dialog);
-  titleLabel->setStyleSheet("font-size: 24px; font-weight: 700; color: #3aafff;");
+  // Logo placeholder
+  auto* logoWidget = new QWidget(dialog);
+  logoWidget->setFixedSize(64, 64);
+  logoWidget->setStyleSheet(R"(
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #238636, stop:1 #3fb950);
+    border-radius: 16px;
+  )");
+  layout->addWidget(logoWidget, 0, Qt::AlignCenter);
+
+  auto* titleLabel = new QLabel("VEIL VPN", dialog);
+  titleLabel->setStyleSheet("font-size: 28px; font-weight: 700; color: #f0f6fc; letter-spacing: 2px;");
   titleLabel->setAlignment(Qt::AlignCenter);
   layout->addWidget(titleLabel);
 
-  auto* versionLabel = new QLabel("Version 0.1.0", dialog);
-  versionLabel->setStyleSheet("color: #8fa1b3; font-size: 14px;");
+  auto* versionLabel = new QLabel("Version 1.0.0", dialog);
+  versionLabel->setStyleSheet(R"(
+    color: #8b949e;
+    font-size: 14px;
+    padding: 4px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+  )");
   versionLabel->setAlignment(Qt::AlignCenter);
-  layout->addWidget(versionLabel);
+  layout->addWidget(versionLabel, 0, Qt::AlignCenter);
+
+  layout->addSpacing(8);
 
   auto* descLabel = new QLabel(
-      "A secure UDP-based VPN client with DPI evasion capabilities.\n\n"
-      "Built with modern cryptography (X25519, ChaCha20-Poly1305)\n"
-      "and advanced traffic morphing techniques.",
+      "A secure UDP-based VPN client with\n"
+      "DPI evasion capabilities.\n\n"
+      "Modern cryptography (X25519, ChaCha20-Poly1305)\n"
+      "Advanced traffic morphing techniques",
       dialog);
   descLabel->setWordWrap(true);
-  descLabel->setStyleSheet("color: #8fa1b3; font-size: 13px;");
+  descLabel->setStyleSheet("color: #8b949e; font-size: 14px; line-height: 1.6;");
   descLabel->setAlignment(Qt::AlignCenter);
   layout->addWidget(descLabel);
 

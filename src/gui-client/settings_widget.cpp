@@ -26,20 +26,20 @@ void SettingsWidget::setupUi() {
   // === Header ===
   auto* headerLayout = new QHBoxLayout();
 
-  auto* backButton = new QPushButton("Back", this);
+  auto* backButton = new QPushButton("\u2190 Back", this);
   backButton->setCursor(Qt::PointingHandCursor);
   backButton->setStyleSheet(R"(
     QPushButton {
       background: transparent;
       border: none;
-      color: #3aafff;
+      color: #58a6ff;
       font-size: 14px;
       font-weight: 500;
       padding: 8px 0;
       text-align: left;
     }
     QPushButton:hover {
-      color: #4abfff;
+      color: #79c0ff;
     }
   )");
   connect(backButton, &QPushButton::clicked, this, &SettingsWidget::backRequested);
@@ -50,7 +50,7 @@ void SettingsWidget::setupUi() {
 
   // Title
   auto* titleLabel = new QLabel("Settings", this);
-  titleLabel->setStyleSheet(QString("font-size: %1px; font-weight: 700; margin-bottom: 8px;")
+  titleLabel->setStyleSheet(QString("font-size: %1px; font-weight: 700; color: #f0f6fc; margin-bottom: 8px;")
                                 .arg(fonts::kFontSizeHeadline));
   mainLayout->addWidget(titleLabel);
 
@@ -86,13 +86,16 @@ void SettingsWidget::setupUi() {
   resetButton_->setStyleSheet(R"(
     QPushButton {
       background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #8fa1b3;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: #8b949e;
       padding: 14px 24px;
+      font-weight: 500;
     }
     QPushButton:hover {
-      background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #f0f6fc;
     }
   )");
   connect(resetButton_, &QPushButton::clicked, this, &SettingsWidget::loadSettings);
@@ -102,6 +105,22 @@ void SettingsWidget::setupUi() {
 
   saveButton_ = new QPushButton("Save Changes", this);
   saveButton_->setCursor(Qt::PointingHandCursor);
+  saveButton_->setStyleSheet(R"(
+    QPushButton {
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #238636, stop:1 #2ea043);
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    QPushButton:hover {
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #2ea043, stop:1 #3fb950);
+    }
+  )");
   connect(saveButton_, &QPushButton::clicked, this, &SettingsWidget::saveSettings);
   footerLayout->addWidget(saveButton_);
 
@@ -250,9 +269,10 @@ void SettingsWidget::createDpiBypassSection(QWidget* parent) {
 
   dpiDescLabel_ = new QLabel(group);
   dpiDescLabel_->setWordWrap(true);
-  dpiDescLabel_->setStyleSheet(QString("color: %1; font-size: 12px; padding: 8px; "
-                                       "background: rgba(58, 175, 255, 0.1); "
-                                       "border-radius: 8px;")
+  dpiDescLabel_->setStyleSheet(QString("color: %1; font-size: 12px; padding: 12px; "
+                                       "background: rgba(88, 166, 255, 0.08); "
+                                       "border: 1px solid rgba(88, 166, 255, 0.2); "
+                                       "border-radius: 10px;")
                                    .arg(colors::dark::kAccentPrimary));
   layout->addWidget(dpiDescLabel_);
 

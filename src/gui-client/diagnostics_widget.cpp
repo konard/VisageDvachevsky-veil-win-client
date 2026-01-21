@@ -40,19 +40,19 @@ void DiagnosticsWidget::setupUi() {
   // === Header ===
   auto* headerLayout = new QHBoxLayout();
 
-  auto* backButton = new QPushButton("Back", this);
+  auto* backButton = new QPushButton("\u2190 Back", this);
   backButton->setCursor(Qt::PointingHandCursor);
   backButton->setStyleSheet(R"(
     QPushButton {
       background: transparent;
       border: none;
-      color: #3aafff;
+      color: #58a6ff;
       font-size: 14px;
       font-weight: 500;
       padding: 8px 0;
     }
     QPushButton:hover {
-      color: #4abfff;
+      color: #79c0ff;
     }
   )");
   connect(backButton, &QPushButton::clicked, this, &DiagnosticsWidget::backRequested);
@@ -63,7 +63,7 @@ void DiagnosticsWidget::setupUi() {
 
   // Title
   auto* titleLabel = new QLabel("Diagnostics", this);
-  titleLabel->setStyleSheet(QString("font-size: %1px; font-weight: 700; margin-bottom: 8px;")
+  titleLabel->setStyleSheet(QString("font-size: %1px; font-weight: 700; color: #f0f6fc; margin-bottom: 8px;")
                                 .arg(fonts::kFontSizeHeadline));
   mainLayout->addWidget(titleLabel);
 
@@ -94,6 +94,22 @@ void DiagnosticsWidget::setupUi() {
 
   exportButton_ = new QPushButton("Export Diagnostics", this);
   exportButton_->setCursor(Qt::PointingHandCursor);
+  exportButton_->setStyleSheet(R"(
+    QPushButton {
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #1f6feb, stop:1 #58a6ff);
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    QPushButton:hover {
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #58a6ff, stop:1 #79c0ff);
+    }
+  )");
   connect(exportButton_, &QPushButton::clicked, this, &DiagnosticsWidget::onExportClicked);
   footerLayout->addWidget(exportButton_);
 
@@ -197,13 +213,14 @@ void DiagnosticsWidget::createLogSection(QWidget* parent) {
   logTextEdit_->setMinimumHeight(200);
   logTextEdit_->setStyleSheet(R"(
     QTextEdit {
-      background-color: #252932;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 12px;
-      color: #eceff4;
-      font-family: 'JetBrains Mono', 'Consolas', monospace;
+      background-color: #161b22;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 16px;
+      color: #f0f6fc;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
       font-size: 12px;
+      line-height: 1.5;
     }
   )");
   layout->addWidget(logTextEdit_);
@@ -213,12 +230,16 @@ void DiagnosticsWidget::createLogSection(QWidget* parent) {
   clearLogButton_->setStyleSheet(R"(
     QPushButton {
       background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #8fa1b3;
-      padding: 8px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #8b949e;
+      padding: 10px 20px;
+      font-weight: 500;
     }
     QPushButton:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #f0f6fc;
     }
   )");
   connect(clearLogButton_, &QPushButton::clicked, this, &DiagnosticsWidget::onClearLogClicked);

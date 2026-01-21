@@ -5,10 +5,154 @@
 #include <QVBoxLayout>
 #include <QFrame>
 #include <QRandomGenerator>
+#include <QPainter>
+#include <QPainterPath>
+#include <QGraphicsDropShadowEffect>
 
 #include "common/gui/theme.h"
 
 namespace veil::gui {
+
+// Custom widget for the circular status indicator with glow effect
+class StatusRing : public QWidget {
+ public:
+  explicit StatusRing(QWidget* parent = nullptr) : QWidget(parent) {
+    setFixedSize(160, 160);
+    setAttribute(Qt::WA_TranslucentBackground);
+  }
+
+  void setState(ConnectionState state) {
+    state_ = state;
+    update();
+  }
+
+  void setPulsePhase(qreal phase) {
+    pulsePhase_ = phase;
+    update();
+  }
+
+ protected:
+  void paintEvent(QPaintEvent*) override {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    const int size = qMin(width(), height());
+    const int centerX = width() / 2;
+    const int centerY = height() / 2;
+    const int ringWidth = 6;
+    const int radius = (size - ringWidth) / 2 - 16;
+
+    // Determine colors based on state
+    QColor baseColor, glowColor;
+    switch (state_) {
+      case ConnectionState::kConnected:
+        baseColor = QColor("#3fb950");
+        glowColor = QColor(63, 185, 80, static_cast<int>(100 + 60 * pulsePhase_));
+        break;
+      case ConnectionState::kConnecting:
+      case ConnectionState::kReconnecting:
+        baseColor = QColor("#d29922");
+        glowColor = QColor(210, 153, 34, static_cast<int>(80 + 80 * pulsePhase_));
+        break;
+      case ConnectionState::kError:
+        baseColor = QColor("#f85149");
+        glowColor = QColor(248, 81, 73, static_cast<int>(80 + 60 * pulsePhase_));
+        break;
+      default:
+        baseColor = QColor("#484f58");
+        glowColor = QColor(72, 79, 88, 40);
+        break;
+    }
+
+    // Draw outer glow for connected/connecting states
+    if (state_ != ConnectionState::kDisconnected) {
+      QRadialGradient glowGradient(centerX, centerY, radius + 30);
+      glowGradient.setColorAt(0.5, glowColor);
+      glowGradient.setColorAt(1.0, Qt::transparent);
+      painter.setBrush(glowGradient);
+      painter.setPen(Qt::NoPen);
+      painter.drawEllipse(QPoint(centerX, centerY), radius + 30, radius + 30);
+    }
+
+    // Draw background circle (subtle)
+    painter.setBrush(QColor(22, 27, 34, 180));
+    painter.setPen(QPen(QColor(255, 255, 255, 15), 1));
+    painter.drawEllipse(QPoint(centerX, centerY), radius, radius);
+
+    // Draw main ring
+    QPen ringPen(baseColor, ringWidth, Qt::SolidLine, Qt::RoundCap);
+    painter.setPen(ringPen);
+    painter.setBrush(Qt::NoBrush);
+
+    if (state_ == ConnectionState::kConnecting || state_ == ConnectionState::kReconnecting) {
+      // Animated arc for connecting state
+      int startAngle = static_cast<int>(pulsePhase_ * 360 * 16);
+      int spanAngle = 270 * 16;
+      painter.drawArc(centerX - radius, centerY - radius,
+                      radius * 2, radius * 2, startAngle, spanAngle);
+    } else {
+      // Full ring for other states
+      painter.drawEllipse(QPoint(centerX, centerY), radius, radius);
+    }
+
+    // Draw inner icon
+    painter.setPen(Qt::NoPen);
+    if (state_ == ConnectionState::kConnected) {
+      // Shield check icon
+      painter.setBrush(baseColor);
+      QPainterPath shield;
+      int iconSize = 36;
+      int ix = centerX - iconSize/2;
+      int iy = centerY - iconSize/2;
+      shield.moveTo(ix + iconSize/2, iy);
+      shield.lineTo(ix + iconSize, iy + iconSize * 0.3);
+      shield.lineTo(ix + iconSize, iy + iconSize * 0.6);
+      shield.quadTo(ix + iconSize/2, iy + iconSize * 1.1, ix + iconSize/2, iy + iconSize);
+      shield.quadTo(ix + iconSize/2, iy + iconSize * 1.1, ix, iy + iconSize * 0.6);
+      shield.lineTo(ix, iy + iconSize * 0.3);
+      shield.closeSubpath();
+      painter.drawPath(shield);
+
+      // Checkmark
+      painter.setPen(QPen(QColor("#0d1117"), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+      painter.drawLine(ix + 12, iy + 20, ix + 16, iy + 26);
+      painter.drawLine(ix + 16, iy + 26, ix + 26, iy + 14);
+    } else if (state_ == ConnectionState::kDisconnected) {
+      // Shield outline
+      painter.setPen(QPen(baseColor, 2));
+      painter.setBrush(Qt::NoBrush);
+      QPainterPath shield;
+      int iconSize = 36;
+      int ix = centerX - iconSize/2;
+      int iy = centerY - iconSize/2;
+      shield.moveTo(ix + iconSize/2, iy);
+      shield.lineTo(ix + iconSize, iy + iconSize * 0.3);
+      shield.lineTo(ix + iconSize, iy + iconSize * 0.6);
+      shield.quadTo(ix + iconSize/2, iy + iconSize * 1.1, ix + iconSize/2, iy + iconSize);
+      shield.quadTo(ix + iconSize/2, iy + iconSize * 1.1, ix, iy + iconSize * 0.6);
+      shield.lineTo(ix, iy + iconSize * 0.3);
+      shield.closeSubpath();
+      painter.drawPath(shield);
+    } else if (state_ == ConnectionState::kError) {
+      // Warning triangle
+      painter.setBrush(baseColor);
+      QPolygonF triangle;
+      triangle << QPointF(centerX, centerY - 18)
+               << QPointF(centerX + 20, centerY + 14)
+               << QPointF(centerX - 20, centerY + 14);
+      painter.drawPolygon(triangle);
+
+      // Exclamation mark
+      painter.setPen(QPen(QColor("#0d1117"), 3, Qt::SolidLine, Qt::RoundCap));
+      painter.drawLine(centerX, centerY - 8, centerX, centerY + 2);
+      painter.drawPoint(centerX, centerY + 8);
+    }
+  }
+
+ private:
+  ConnectionState state_{ConnectionState::kDisconnected};
+  qreal pulsePhase_{0.0};
+};
 
 ConnectionWidget::ConnectionWidget(QWidget* parent) : QWidget(parent) {
   setupUi();
@@ -18,194 +162,239 @@ ConnectionWidget::ConnectionWidget(QWidget* parent) : QWidget(parent) {
 
 void ConnectionWidget::setupUi() {
   auto* mainLayout = new QVBoxLayout(this);
-  mainLayout->setSpacing(24);
-  mainLayout->setContentsMargins(spacing::kPaddingXLarge, spacing::kPaddingXLarge,
-                                  spacing::kPaddingXLarge, spacing::kPaddingXLarge);
+  mainLayout->setSpacing(0);
+  mainLayout->setContentsMargins(spacing::kPaddingXLarge, spacing::kPaddingLarge,
+                                  spacing::kPaddingXLarge, spacing::kPaddingLarge);
 
-  // === Header with logo ===
-  auto* headerLayout = new QHBoxLayout();
-  auto* logoLabel = new QLabel("VEIL", this);
-  logoLabel->setStyleSheet(QString("font-size: %1px; font-weight: 700; color: %2;")
-                               .arg(fonts::kFontSizeHeadline)
-                               .arg(colors::dark::kAccentPrimary));
-  headerLayout->addWidget(logoLabel);
+  // === Header with branding ===
+  auto* headerWidget = new QWidget(this);
+  auto* headerLayout = new QHBoxLayout(headerWidget);
+  headerLayout->setContentsMargins(0, 0, 0, spacing::kPaddingLarge);
+
+  auto* logoContainer = new QWidget(headerWidget);
+  auto* logoLayout = new QHBoxLayout(logoContainer);
+  logoLayout->setContentsMargins(0, 0, 0, 0);
+  logoLayout->setSpacing(12);
+
+  // Logo icon placeholder
+  auto* logoIcon = new QLabel(this);
+  logoIcon->setFixedSize(32, 32);
+  logoIcon->setStyleSheet(R"(
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #238636, stop:1 #3fb950);
+    border-radius: 8px;
+  )");
+  logoLayout->addWidget(logoIcon);
+
+  auto* logoText = new QLabel("VEIL", this);
+  logoText->setStyleSheet(QString(R"(
+    font-size: 24px;
+    font-weight: 700;
+    color: #f0f6fc;
+    letter-spacing: 2px;
+  )"));
+  logoLayout->addWidget(logoText);
+
+  headerLayout->addWidget(logoContainer);
   headerLayout->addStretch();
-  mainLayout->addLayout(headerLayout);
 
-  // === Status Card ===
-  statusCard_ = new QWidget(this);
-  statusCard_->setObjectName("statusCard");
-  statusCard_->setStyleSheet(R"(
-    #statusCard {
-      background-color: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 24px;
+  // Settings button with icon-style
+  settingsButton_ = new QPushButton(this);
+  settingsButton_->setFixedSize(40, 40);
+  settingsButton_->setCursor(Qt::PointingHandCursor);
+  settingsButton_->setToolTip("Settings");
+  settingsButton_->setStyleSheet(R"(
+    QPushButton {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      font-size: 18px;
+    }
+    QPushButton:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
     }
   )");
+  settingsButton_->setText("\u2699");  // Gear icon
+  connect(settingsButton_, &QPushButton::clicked, this, &ConnectionWidget::settingsRequested);
+  headerLayout->addWidget(settingsButton_);
 
-  auto* statusCardLayout = new QVBoxLayout(statusCard_);
-  statusCardLayout->setAlignment(Qt::AlignCenter);
-  statusCardLayout->setSpacing(12);
+  mainLayout->addWidget(headerWidget);
 
-  // Status indicator and text in a horizontal layout
-  auto* statusRowLayout = new QHBoxLayout();
-  statusRowLayout->setAlignment(Qt::AlignCenter);
-  statusRowLayout->setSpacing(12);
+  // === Central Status Area ===
+  auto* statusContainer = new QWidget(this);
+  statusContainer->setStyleSheet(R"(
+    QWidget {
+      background: transparent;
+    }
+  )");
+  auto* statusContainerLayout = new QVBoxLayout(statusContainer);
+  statusContainerLayout->setAlignment(Qt::AlignCenter);
+  statusContainerLayout->setSpacing(20);
 
-  statusIndicator_ = new QLabel(this);
-  statusIndicator_->setFixedSize(16, 16);
-  statusIndicator_->setStyleSheet(QString("background-color: %1; border-radius: 8px;")
-                                      .arg(colors::dark::kTextSecondary));
-  statusRowLayout->addWidget(statusIndicator_);
+  // Status ring (custom painted widget)
+  statusRing_ = new StatusRing(this);
+  statusContainerLayout->addWidget(statusRing_, 0, Qt::AlignCenter);
 
-  statusLabel_ = new QLabel("Disconnected", this);
-  statusLabel_->setStyleSheet(QString("font-size: %1px; font-weight: 600; color: %2;")
-                                  .arg(fonts::kFontSizeTitle)
-                                  .arg(colors::dark::kTextSecondary));
-  statusRowLayout->addWidget(statusLabel_);
+  // Status text
+  statusLabel_ = new QLabel("Not Connected", this);
+  statusLabel_->setAlignment(Qt::AlignCenter);
+  statusLabel_->setStyleSheet(QString(R"(
+    font-size: 22px;
+    font-weight: 600;
+    color: %1;
+  )").arg(colors::dark::kTextSecondary));
+  statusContainerLayout->addWidget(statusLabel_);
 
-  statusCardLayout->addLayout(statusRowLayout);
+  // Subtitle / IP info
+  subtitleLabel_ = new QLabel("Tap Connect to secure your connection", this);
+  subtitleLabel_->setAlignment(Qt::AlignCenter);
+  subtitleLabel_->setStyleSheet(QString(R"(
+    font-size: 14px;
+    color: %1;
+    padding: 0 40px;
+  )").arg(colors::dark::kTextTertiary));
+  subtitleLabel_->setWordWrap(true);
+  statusContainerLayout->addWidget(subtitleLabel_);
 
   // Error label (hidden by default)
   errorLabel_ = new QLabel(this);
   errorLabel_->setWordWrap(true);
   errorLabel_->setAlignment(Qt::AlignCenter);
-  errorLabel_->setStyleSheet(QString("color: %1; font-size: %2px; padding: 8px;")
-                                 .arg(colors::dark::kAccentError)
-                                 .arg(fonts::kFontSizeCaption));
+  errorLabel_->setStyleSheet(QString(R"(
+    color: %1;
+    font-size: 13px;
+    padding: 12px 20px;
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid rgba(248, 81, 73, 0.3);
+    border-radius: 10px;
+    margin: 8px 20px;
+  )").arg(colors::dark::kAccentError));
   errorLabel_->hide();
-  statusCardLayout->addWidget(errorLabel_);
+  statusContainerLayout->addWidget(errorLabel_);
 
-  statusCard_->setMinimumHeight(120);
-  mainLayout->addWidget(statusCard_);
+  mainLayout->addWidget(statusContainer, 1);
 
-  // === Connect Button ===
+  // === Connect Button (Large, prominent) ===
   connectButton_ = new QPushButton("Connect", this);
-  connectButton_->setMinimumHeight(56);
+  connectButton_->setMinimumHeight(64);
   connectButton_->setCursor(Qt::PointingHandCursor);
+  connectButton_->setStyleSheet(R"(
+    QPushButton {
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #238636, stop:1 #2ea043);
+      border: none;
+      border-radius: 16px;
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    QPushButton:hover {
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #2ea043, stop:1 #3fb950);
+    }
+    QPushButton:pressed {
+      background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                  stop:0 #1a7f37, stop:1 #238636);
+    }
+  )");
   connect(connectButton_, &QPushButton::clicked, this, &ConnectionWidget::onConnectClicked);
   mainLayout->addWidget(connectButton_);
 
+  mainLayout->addSpacing(spacing::kPaddingLarge);
+
   // === Session Info Card ===
-  auto* sessionGroup = new QGroupBox("Session Info", this);
-  auto* sessionLayout = new QVBoxLayout(sessionGroup);
-  sessionLayout->setSpacing(12);
-
-  // Session ID row
-  auto* sessionIdRow = new QHBoxLayout();
-  auto* sessionIdLabelTitle = new QLabel("Session ID", sessionGroup);
-  sessionIdLabelTitle->setProperty("textStyle", "secondary");
-  sessionIdRow->addWidget(sessionIdLabelTitle);
-  sessionIdRow->addStretch();
-  sessionIdLabel_ = new QLabel("\u2014", sessionGroup);  // em-dash
-  sessionIdLabel_->setProperty("textStyle", "mono");
-  sessionIdRow->addWidget(sessionIdLabel_);
-  sessionLayout->addLayout(sessionIdRow);
-
-  // Separator
-  auto* sep1 = new QFrame(sessionGroup);
-  sep1->setFrameShape(QFrame::HLine);
-  sep1->setStyleSheet("background-color: rgba(255, 255, 255, 0.05);");
-  sep1->setFixedHeight(1);
-  sessionLayout->addWidget(sep1);
-
-  // Server row
-  auto* serverRow = new QHBoxLayout();
-  auto* serverLabelTitle = new QLabel("Server", sessionGroup);
-  serverLabelTitle->setProperty("textStyle", "secondary");
-  serverRow->addWidget(serverLabelTitle);
-  serverRow->addStretch();
-  serverLabel_ = new QLabel("vpn.example.com:4433", sessionGroup);
-  serverLabel_->setProperty("textStyle", "mono");
-  serverRow->addWidget(serverLabel_);
-  sessionLayout->addLayout(serverRow);
-
-  // Separator
-  auto* sep2 = new QFrame(sessionGroup);
-  sep2->setFrameShape(QFrame::HLine);
-  sep2->setStyleSheet("background-color: rgba(255, 255, 255, 0.05);");
-  sep2->setFixedHeight(1);
-  sessionLayout->addWidget(sep2);
-
-  // Latency row
-  auto* latencyRow = new QHBoxLayout();
-  auto* latencyLabelTitle = new QLabel("Latency", sessionGroup);
-  latencyLabelTitle->setProperty("textStyle", "secondary");
-  latencyRow->addWidget(latencyLabelTitle);
-  latencyRow->addStretch();
-  latencyLabel_ = new QLabel("\u2014", sessionGroup);
-  latencyRow->addWidget(latencyLabel_);
-  sessionLayout->addLayout(latencyRow);
-
-  // Separator
-  auto* sep3 = new QFrame(sessionGroup);
-  sep3->setFrameShape(QFrame::HLine);
-  sep3->setStyleSheet("background-color: rgba(255, 255, 255, 0.05);");
-  sep3->setFixedHeight(1);
-  sessionLayout->addWidget(sep3);
-
-  // Throughput row
-  auto* throughputRow = new QHBoxLayout();
-  auto* throughputLabelTitle = new QLabel("TX / RX", sessionGroup);
-  throughputLabelTitle->setProperty("textStyle", "secondary");
-  throughputRow->addWidget(throughputLabelTitle);
-  throughputRow->addStretch();
-  throughputLabel_ = new QLabel("0 KB/s / 0 KB/s", sessionGroup);
-  throughputRow->addWidget(throughputLabel_);
-  sessionLayout->addLayout(throughputRow);
-
-  // Separator
-  auto* sep4 = new QFrame(sessionGroup);
-  sep4->setFrameShape(QFrame::HLine);
-  sep4->setStyleSheet("background-color: rgba(255, 255, 255, 0.05);");
-  sep4->setFixedHeight(1);
-  sessionLayout->addWidget(sep4);
-
-  // Uptime row
-  auto* uptimeRow = new QHBoxLayout();
-  auto* uptimeLabelTitle = new QLabel("Uptime", sessionGroup);
-  uptimeLabelTitle->setProperty("textStyle", "secondary");
-  uptimeRow->addWidget(uptimeLabelTitle);
-  uptimeRow->addStretch();
-  uptimeLabel_ = new QLabel("\u2014", sessionGroup);
-  uptimeRow->addWidget(uptimeLabel_);
-  sessionLayout->addLayout(uptimeRow);
-
-  sessionInfoGroup_ = sessionGroup;
-  mainLayout->addWidget(sessionGroup);
-
-  // Spacer
-  mainLayout->addStretch();
-
-  // === Footer Buttons ===
-  auto* footerLayout = new QHBoxLayout();
-  footerLayout->setSpacing(12);
-
-  settingsButton_ = new QPushButton("Settings", this);
-  settingsButton_->setProperty("buttonStyle", "secondary");
-  settingsButton_->setCursor(Qt::PointingHandCursor);
-  settingsButton_->setStyleSheet(R"(
-    QPushButton {
-      background: #252932;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 14px 24px;
-    }
-    QPushButton:hover {
-      background: #2e3440;
-      border-color: rgba(255, 255, 255, 0.2);
+  statusCard_ = new QWidget(this);
+  statusCard_->setObjectName("sessionCard");
+  statusCard_->setStyleSheet(R"(
+    #sessionCard {
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
     }
   )");
-  connect(settingsButton_, &QPushButton::clicked, this, &ConnectionWidget::settingsRequested);
-  footerLayout->addWidget(settingsButton_);
 
-  mainLayout->addLayout(footerLayout);
+  auto* cardLayout = new QVBoxLayout(statusCard_);
+  cardLayout->setSpacing(0);
+  cardLayout->setContentsMargins(20, 16, 20, 16);
+
+  // Helper function to create info rows
+  auto createInfoRow = [this, cardLayout](const QString& icon, const QString& label,
+                                           QLabel*& valueLabel, bool addSeparator = true) {
+    auto* row = new QWidget(this);
+    auto* rowLayout = new QHBoxLayout(row);
+    rowLayout->setContentsMargins(0, 12, 0, 12);
+    rowLayout->setSpacing(12);
+
+    // Icon
+    auto* iconLabel = new QLabel(icon, this);
+    iconLabel->setFixedWidth(24);
+    iconLabel->setStyleSheet("font-size: 16px; color: #6e7681;");
+    rowLayout->addWidget(iconLabel);
+
+    // Label
+    auto* textLabel = new QLabel(label, this);
+    textLabel->setStyleSheet("color: #8b949e; font-size: 14px;");
+    rowLayout->addWidget(textLabel);
+
+    rowLayout->addStretch();
+
+    // Value
+    valueLabel = new QLabel("\u2014", this);
+    valueLabel->setStyleSheet("color: #f0f6fc; font-size: 14px; font-weight: 500;");
+    rowLayout->addWidget(valueLabel);
+
+    cardLayout->addWidget(row);
+
+    if (addSeparator) {
+      auto* sep = new QFrame(this);
+      sep->setFrameShape(QFrame::HLine);
+      sep->setStyleSheet("background-color: rgba(255, 255, 255, 0.04); max-height: 1px;");
+      cardLayout->addWidget(sep);
+    }
+  };
+
+  createInfoRow("\U0001F310", "Server", serverLabel_);  // Globe
+  createInfoRow("\u23F1", "Latency", latencyLabel_);  // Stopwatch
+  createInfoRow("\u2191\u2193", "TX / RX", throughputLabel_);  // Up/Down arrows
+  createInfoRow("\u23F0", "Uptime", uptimeLabel_, false);  // Clock
+
+  mainLayout->addWidget(statusCard_);
+
+  // Session ID row (separate, monospace)
+  sessionInfoGroup_ = new QWidget(this);
+  auto* sessionLayout = new QHBoxLayout(sessionInfoGroup_);
+  sessionLayout->setContentsMargins(20, 12, 20, 0);
+  sessionLayout->setSpacing(8);
+
+  auto* sessionIcon = new QLabel("\U0001F511", this);  // Key
+  sessionIcon->setStyleSheet("font-size: 14px; color: #6e7681;");
+  sessionLayout->addWidget(sessionIcon);
+
+  auto* sessionTitle = new QLabel("Session", this);
+  sessionTitle->setStyleSheet("color: #6e7681; font-size: 13px;");
+  sessionLayout->addWidget(sessionTitle);
+
+  sessionLayout->addStretch();
+
+  sessionIdLabel_ = new QLabel("\u2014", this);
+  sessionIdLabel_->setStyleSheet(R"(
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: #79c0ff;
+  )");
+  sessionLayout->addWidget(sessionIdLabel_);
+
+  mainLayout->addWidget(sessionInfoGroup_);
+
+  mainLayout->addStretch();
 }
 
 void ConnectionWidget::setupAnimations() {
   // Setup pulse animation timer for connecting state
   pulseTimer_ = new QTimer(this);
-  pulseTimer_->setInterval(750);  // 1.5s cycle = 750ms per half
+  pulseTimer_->setInterval(50);  // Smooth animation at ~20fps
   connect(pulseTimer_, &QTimer::timeout, this, &ConnectionWidget::onPulseAnimation);
 
   // Setup uptime timer
@@ -214,9 +403,8 @@ void ConnectionWidget::setupAnimations() {
   connect(uptimeTimer_, &QTimer::timeout, this, &ConnectionWidget::onUptimeUpdate);
 
   // Setup opacity effect for status indicator
-  statusOpacity_ = new QGraphicsOpacityEffect(statusIndicator_);
+  statusOpacity_ = new QGraphicsOpacityEffect(this);
   statusOpacity_->setOpacity(1.0);
-  statusIndicator_->setGraphicsEffect(statusOpacity_);
 }
 
 void ConnectionWidget::onConnectClicked() {
@@ -248,6 +436,11 @@ void ConnectionWidget::onConnectClicked() {
 void ConnectionWidget::setConnectionState(ConnectionState state) {
   state_ = state;
 
+  // Update the status ring
+  if (statusRing_) {
+    static_cast<StatusRing*>(statusRing_)->setState(state);
+  }
+
   // Handle state transitions
   if (state == ConnectionState::kConnecting || state == ConnectionState::kReconnecting) {
     startPulseAnimation();
@@ -277,21 +470,64 @@ void ConnectionWidget::updateStatusDisplay() {
   QString statusColor = getStatusColor();
   QString statusText = getStatusText();
 
-  // Update status indicator color
-  statusIndicator_->setStyleSheet(QString("background-color: %1; border-radius: 8px;").arg(statusColor));
-
   // Update status label
   statusLabel_->setText(statusText);
-  statusLabel_->setStyleSheet(QString("font-size: %1px; font-weight: 600; color: %2;")
-                                  .arg(fonts::kFontSizeTitle)
-                                  .arg(statusColor));
+  statusLabel_->setStyleSheet(QString("font-size: 22px; font-weight: 600; color: %1;").arg(statusColor));
+
+  // Update subtitle based on state
+  switch (state_) {
+    case ConnectionState::kDisconnected:
+      subtitleLabel_->setText("Tap Connect to secure your connection");
+      subtitleLabel_->setStyleSheet(QString("font-size: 14px; color: %1; padding: 0 40px;")
+                                        .arg(colors::dark::kTextTertiary));
+      break;
+    case ConnectionState::kConnecting:
+      subtitleLabel_->setText("Establishing secure tunnel...");
+      subtitleLabel_->setStyleSheet(QString("font-size: 14px; color: %1; padding: 0 40px;")
+                                        .arg(colors::dark::kAccentWarning));
+      break;
+    case ConnectionState::kConnected:
+      subtitleLabel_->setText(QString("Connected to %1").arg(serverAddress_));
+      subtitleLabel_->setStyleSheet(QString("font-size: 14px; color: %1; padding: 0 40px;")
+                                        .arg(colors::dark::kAccentSuccess));
+      break;
+    case ConnectionState::kReconnecting:
+      subtitleLabel_->setText(QString("Reconnecting... Attempt %1").arg(reconnectAttempt_));
+      subtitleLabel_->setStyleSheet(QString("font-size: 14px; color: %1; padding: 0 40px;")
+                                        .arg(colors::dark::kAccentWarning));
+      break;
+    case ConnectionState::kError:
+      subtitleLabel_->setText("Connection failed");
+      subtitleLabel_->setStyleSheet(QString("font-size: 14px; color: %1; padding: 0 40px;")
+                                        .arg(colors::dark::kAccentError));
+      break;
+  }
 
   // Update connect button
   switch (state_) {
     case ConnectionState::kDisconnected:
     case ConnectionState::kError:
-      connectButton_->setText(state_ == ConnectionState::kError ? "Retry" : "Connect");
-      connectButton_->setStyleSheet("");  // Use default gradient
+      connectButton_->setText(state_ == ConnectionState::kError ? "Retry Connection" : "Connect");
+      connectButton_->setStyleSheet(R"(
+        QPushButton {
+          background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                      stop:0 #238636, stop:1 #2ea043);
+          border: none;
+          border-radius: 16px;
+          color: white;
+          font-size: 18px;
+          font-weight: 600;
+          letter-spacing: 0.5px;
+        }
+        QPushButton:hover {
+          background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                      stop:0 #2ea043, stop:1 #3fb950);
+        }
+        QPushButton:pressed {
+          background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                      stop:0 #1a7f37, stop:1 #238636);
+        }
+      )");
       break;
     case ConnectionState::kConnecting:
     case ConnectionState::kReconnecting:
@@ -299,27 +535,39 @@ void ConnectionWidget::updateStatusDisplay() {
       connectButton_->setStyleSheet(QString(R"(
         QPushButton {
           background: transparent;
-          border: 2px solid %1;
-          color: %1;
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          border-radius: 16px;
+          color: #8b949e;
+          font-size: 18px;
+          font-weight: 600;
         }
         QPushButton:hover {
-          background: rgba(255, 107, 107, 0.1);
+          background: rgba(255, 255, 255, 0.04);
+          border-color: rgba(255, 255, 255, 0.3);
+          color: #f0f6fc;
         }
-      )").arg(colors::dark::kAccentError));
+      )"));
       break;
     case ConnectionState::kConnected:
       connectButton_->setText("Disconnect");
       connectButton_->setStyleSheet(QString(R"(
         QPushButton {
-          background: %1;
+          background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                      stop:0 #da3633, stop:1 #f85149);
+          border: none;
+          border-radius: 16px;
+          color: white;
+          font-size: 18px;
+          font-weight: 600;
         }
         QPushButton:hover {
-          background: #ff8080;
+          background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                      stop:0 #f85149, stop:1 #ff7b7b);
         }
         QPushButton:pressed {
-          background: #e55656;
+          background: #b62324;
         }
-      )").arg(colors::dark::kAccentError));
+      )"));
       break;
   }
 
@@ -338,11 +586,14 @@ void ConnectionWidget::updateStatusDisplay() {
     if (!sessionId_.isEmpty()) {
       // Truncate long session IDs
       QString displayId = sessionId_;
-      if (displayId.length() > 16) {
-        displayId = displayId.left(14) + "...";
+      if (displayId.length() > 18) {
+        displayId = displayId.left(8) + "..." + displayId.right(6);
       }
       sessionIdLabel_->setText(displayId);
     }
+
+    serverLabel_->setText(QString("%1:%2").arg(serverAddress_).arg(serverPort_));
+
     // Latency color coding
     QString latencyColor = colors::dark::kTextPrimary;
     if (latencyMs_ > 0) {
@@ -354,14 +605,15 @@ void ConnectionWidget::updateStatusDisplay() {
         latencyColor = colors::dark::kAccentError;
       }
       latencyLabel_->setText(QString("%1 ms").arg(latencyMs_));
-      latencyLabel_->setStyleSheet(QString("color: %1;").arg(latencyColor));
+      latencyLabel_->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 500;").arg(latencyColor));
     }
     throughputLabel_->setText(QString("%1 / %2").arg(formatBytes(txBytes_), formatBytes(rxBytes_)));
   } else {
     sessionIdLabel_->setText("\u2014");
+    serverLabel_->setText(QString("%1:%2").arg(serverAddress_).arg(serverPort_));
     latencyLabel_->setText("\u2014");
-    latencyLabel_->setStyleSheet("");
-    throughputLabel_->setText("0 KB/s / 0 KB/s");
+    latencyLabel_->setStyleSheet("color: #f0f6fc; font-size: 14px; font-weight: 500;");
+    throughputLabel_->setText("\u2014");
     uptimeLabel_->setText("\u2014");
   }
 }
@@ -398,8 +650,14 @@ void ConnectionWidget::setErrorMessage(const QString& message) {
 }
 
 void ConnectionWidget::onPulseAnimation() {
-  pulseState_ = !pulseState_;
-  statusOpacity_->setOpacity(pulseState_ ? 1.0 : 0.5);
+  animationPhase_ += 0.03;
+  if (animationPhase_ > 1.0) {
+    animationPhase_ -= 1.0;
+  }
+
+  if (statusRing_) {
+    static_cast<StatusRing*>(statusRing_)->setPulsePhase(animationPhase_);
+  }
 }
 
 void ConnectionWidget::onUptimeUpdate() {
@@ -417,12 +675,16 @@ void ConnectionWidget::onUptimeUpdate() {
 }
 
 void ConnectionWidget::startPulseAnimation() {
+  animationPhase_ = 0.0;
   pulseTimer_->start();
 }
 
 void ConnectionWidget::stopPulseAnimation() {
   pulseTimer_->stop();
-  statusOpacity_->setOpacity(1.0);
+  animationPhase_ = 0.0;
+  if (statusRing_) {
+    static_cast<StatusRing*>(statusRing_)->setPulsePhase(0.0);
+  }
 }
 
 QString ConnectionWidget::formatBytes(uint64_t bytesPerSec) const {
@@ -465,13 +727,13 @@ QString ConnectionWidget::getStatusColor() const {
 QString ConnectionWidget::getStatusText() const {
   switch (state_) {
     case ConnectionState::kDisconnected:
-      return "Disconnected";
+      return "Not Connected";
     case ConnectionState::kConnecting:
-      return "Connecting...";
+      return "Connecting";
     case ConnectionState::kConnected:
-      return "Connected";
+      return "Protected";
     case ConnectionState::kReconnecting:
-      return QString("Reconnecting... (Attempt %1)").arg(reconnectAttempt_);
+      return "Reconnecting";
     case ConnectionState::kError:
       return "Connection Failed";
   }

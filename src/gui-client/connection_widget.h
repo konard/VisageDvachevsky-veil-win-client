@@ -64,8 +64,9 @@ class ConnectionWidget : public QWidget {
 
   // UI Elements
   QWidget* statusCard_;
-  QLabel* statusIndicator_;
+  QWidget* statusRing_;  // Custom painted status ring
   QLabel* statusLabel_;
+  QLabel* subtitleLabel_;
   QLabel* errorLabel_;
   QPushButton* connectButton_;
 
@@ -79,7 +80,6 @@ class ConnectionWidget : public QWidget {
 
   // Navigation
   QPushButton* settingsButton_;
-  QPushButton* diagnosticsButton_;
 
   // State
   ConnectionState state_{ConnectionState::kDisconnected};
@@ -99,6 +99,7 @@ class ConnectionWidget : public QWidget {
   QGraphicsOpacityEffect* statusOpacity_;
   QElapsedTimer uptimeCounter_;
   bool pulseState_{false};
+  qreal animationPhase_{0.0};
 };
 
 }  // namespace veil::gui
