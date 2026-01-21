@@ -7,11 +7,15 @@ if(WIN32)
     windows/service_manager.cpp
     windows/system_tray.cpp
   )
+  # Windows doesn't use POSIX signals
+  set(VEIL_SIGNAL_SOURCES)
 else()
   set(VEIL_TUN_SOURCES tun/tun_device_linux.cpp)
   set(VEIL_ROUTING_SOURCES tun/routing_linux.cpp)
   set(VEIL_IPC_SOURCES common/ipc/ipc_socket_unix.cpp)
   set(VEIL_WINDOWS_SOURCES)
+  # POSIX signals are available on Unix-like systems
+  set(VEIL_SIGNAL_SOURCES common/signal/signal_handler.cpp)
 endif()
 
 add_library(veil_common STATIC
@@ -34,7 +38,7 @@ add_library(veil_common STATIC
   common/metrics/metrics.cpp
   common/obfuscation/obfuscation_profile.cpp
   common/protocol_wrapper/websocket_wrapper.cpp
-  common/signal/signal_handler.cpp
+  ${VEIL_SIGNAL_SOURCES}
   common/daemon/daemon.cpp
   common/ipc/ipc_protocol.cpp
   ${VEIL_IPC_SOURCES}

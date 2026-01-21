@@ -1,6 +1,7 @@
 #include "common/protocol_wrapper/websocket_wrapper.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <limits>
