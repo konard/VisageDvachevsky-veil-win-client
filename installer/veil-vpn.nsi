@@ -14,6 +14,7 @@
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 !include "x64.nsh"
+!include "LogicLib.nsh"
 
 ; ============================================================================
 ; General Configuration
