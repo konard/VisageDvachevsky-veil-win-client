@@ -6,10 +6,12 @@
 #include "tun/tun_device.h"
 
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
 #include <netioapi.h>
+#include <rpc.h>
 
 #include <array>
 #include <atomic>
@@ -90,29 +92,29 @@ bool load_wintun_api(std::error_code& ec) {
     return false;
   }
 
-#define LOAD_WINTUN_FUNC(name) \
-  g_wintun.name = reinterpret_cast<WINTUN_##name##_FUNC>( \
-      GetProcAddress(g_wintun.module, "Wintun" #name)); \
-  if (!g_wintun.name) { \
+#define LOAD_WINTUN_FUNC(field, funcname, typedef_name) \
+  g_wintun.field = reinterpret_cast<typedef_name>( \
+      GetProcAddress(g_wintun.module, funcname)); \
+  if (!g_wintun.field) { \
     ec = std::error_code(static_cast<int>(GetLastError()), std::system_category()); \
-    LOG_ERROR("Failed to load Wintun" #name ": {}", ec.message()); \
+    LOG_ERROR("Failed to load {}: {}", funcname, ec.message()); \
     FreeLibrary(g_wintun.module); \
     g_wintun.module = nullptr; \
     return false; \
   }
 
-  LOAD_WINTUN_FUNC(CreateAdapter);
-  LOAD_WINTUN_FUNC(OpenAdapter);
-  LOAD_WINTUN_FUNC(CloseAdapter);
-  LOAD_WINTUN_FUNC(GetAdapterLUID);
-  LOAD_WINTUN_FUNC(StartSession);
-  LOAD_WINTUN_FUNC(EndSession);
-  LOAD_WINTUN_FUNC(GetReadWaitEvent);
-  LOAD_WINTUN_FUNC(ReceivePacket);
-  LOAD_WINTUN_FUNC(ReleaseReceivePacket);
-  LOAD_WINTUN_FUNC(AllocateSendPacket);
-  LOAD_WINTUN_FUNC(SendPacket);
-  LOAD_WINTUN_FUNC(GetRunningDriverVersion);
+  LOAD_WINTUN_FUNC(CreateAdapter, "WintunCreateAdapter", WINTUN_CREATE_ADAPTER_FUNC);
+  LOAD_WINTUN_FUNC(OpenAdapter, "WintunOpenAdapter", WINTUN_OPEN_ADAPTER_FUNC);
+  LOAD_WINTUN_FUNC(CloseAdapter, "WintunCloseAdapter", WINTUN_CLOSE_ADAPTER_FUNC);
+  LOAD_WINTUN_FUNC(GetAdapterLUID, "WintunGetAdapterLUID", WINTUN_GET_ADAPTER_LUID_FUNC);
+  LOAD_WINTUN_FUNC(StartSession, "WintunStartSession", WINTUN_START_SESSION_FUNC);
+  LOAD_WINTUN_FUNC(EndSession, "WintunEndSession", WINTUN_END_SESSION_FUNC);
+  LOAD_WINTUN_FUNC(GetReadWaitEvent, "WintunGetReadWaitEvent", WINTUN_GET_READ_WAIT_EVENT_FUNC);
+  LOAD_WINTUN_FUNC(ReceivePacket, "WintunReceivePacket", WINTUN_RECEIVE_PACKET_FUNC);
+  LOAD_WINTUN_FUNC(ReleaseReceivePacket, "WintunReleaseReceivePacket", WINTUN_RELEASE_RECEIVE_PACKET_FUNC);
+  LOAD_WINTUN_FUNC(AllocateSendPacket, "WintunAllocateSendPacket", WINTUN_ALLOCATE_SEND_PACKET_FUNC);
+  LOAD_WINTUN_FUNC(SendPacket, "WintunSendPacket", WINTUN_SEND_PACKET_FUNC);
+  LOAD_WINTUN_FUNC(GetRunningDriverVersion, "WintunGetRunningDriverVersion", WINTUN_GET_RUNNING_DRIVER_VERSION_FUNC);
 
 #undef LOAD_WINTUN_FUNC
 
