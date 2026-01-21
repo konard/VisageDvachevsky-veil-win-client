@@ -3,6 +3,7 @@ if(WIN32)
   set(VEIL_PLATFORM_TEST_SOURCES)
 else()
   set(VEIL_PLATFORM_TEST_SOURCES
+    config_tests.cpp
     udp_socket_tests.cpp
     ack_bitmap_tests.cpp
     reorder_buffer_tests.cpp
@@ -20,7 +21,6 @@ endif()
 
 add_executable(veil_unit_tests
   random_tests.cpp
-  config_tests.cpp
   crypto_tests.cpp
   websocket_wrapper_tests.cpp
   packet_tests.cpp
