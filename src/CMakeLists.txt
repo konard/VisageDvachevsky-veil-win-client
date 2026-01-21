@@ -7,10 +7,12 @@ if(WIN32)
     windows/service_manager.cpp
     windows/system_tray.cpp
   )
-  # Windows doesn't use POSIX signals, daemonization, or epoll-based transport
+  # Windows doesn't use POSIX signals, daemonization, epoll-based transport, or tunnel
   set(VEIL_SIGNAL_SOURCES)
   set(VEIL_DAEMON_SOURCES)
   set(VEIL_TRANSPORT_SOURCES)
+  set(VEIL_TUNNEL_SOURCES)
+  set(VEIL_SERVER_SOURCES)
 else()
   set(VEIL_TUN_SOURCES tun/tun_device_linux.cpp)
   set(VEIL_ROUTING_SOURCES tun/routing_linux.cpp)
@@ -30,6 +32,13 @@ else()
     transport/session/transport_session.cpp
     transport/event_loop/event_loop.cpp
     transport/stats/transport_stats.cpp
+  )
+  set(VEIL_TUNNEL_SOURCES
+    tunnel/tunnel.cpp
+    tunnel/session_migration.cpp
+  )
+  set(VEIL_SERVER_SOURCES
+    server/session_table.cpp
   )
 endif()
 
@@ -61,9 +70,8 @@ add_library(veil_common STATIC
   ${VEIL_TUN_SOURCES}
   ${VEIL_ROUTING_SOURCES}
   tun/mtu_discovery.cpp
-  tunnel/tunnel.cpp
-  tunnel/session_migration.cpp
-  server/session_table.cpp
+  ${VEIL_TUNNEL_SOURCES}
+  ${VEIL_SERVER_SOURCES}
   ${VEIL_WINDOWS_SOURCES}
 )
 
@@ -94,23 +102,25 @@ if(TARGET sodium_ep)
   add_dependencies(veil_common sodium_ep)
 endif()
 
-# Client executable.
-add_executable(veil-client
-  client/main.cpp
-  client/client_config.cpp
-)
+# Client executable (requires transport layer, not available on Windows yet).
+if(NOT WIN32)
+  add_executable(veil-client
+    client/main.cpp
+    client/client_config.cpp
+  )
 
-target_link_libraries(veil-client PRIVATE veil_common)
-veil_set_warnings(veil-client)
+  target_link_libraries(veil-client PRIVATE veil_common)
+  veil_set_warnings(veil-client)
 
-install(TARGETS veil-client
-  RUNTIME DESTINATION bin
-)
+  install(TARGETS veil-client
+    RUNTIME DESTINATION bin
+  )
+endif()
 
-# Server executable (optional).
+# Server executable (optional, requires transport layer, not available on Windows yet).
 option(VEIL_BUILD_SERVER "Build server executable" ON)
 
-if(VEIL_BUILD_SERVER)
+if(VEIL_BUILD_SERVER AND NOT WIN32)
   add_executable(veil-server
     server/main.cpp
     server/server_config.cpp
