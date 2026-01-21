@@ -13,6 +13,8 @@ else()
     transport_session_tests.cpp
     signal_handler_tests.cpp
     daemon_tests.cpp
+    session_table_tests.cpp
+    session_migration_tests.cpp
   )
 endif()
 
@@ -30,12 +32,10 @@ add_executable(veil_unit_tests
   tun_device_tests.cpp
   routing_tests.cpp
   mtu_discovery_tests.cpp
-  session_table_tests.cpp
   advanced_rate_limiter_tests.cpp
   session_lifecycle_tests.cpp
   constrained_logging_tests.cpp
   metrics_tests.cpp
-  session_migration_tests.cpp
   thread_checker_tests.cpp
   ${VEIL_PLATFORM_TEST_SOURCES}
 )
